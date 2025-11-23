@@ -6,20 +6,20 @@ import type {
   LanguageModelV3FinishReason,
   LanguageModelV3StreamPart,
   LanguageModelV3Usage,
-} from '@ai-sdk/provider';
+} from "@ai-sdk/provider";
 import {
   combineHeaders,
   createEventSourceResponseHandler,
   createJsonResponseHandler,
   parseProviderOptions,
   postJsonToApi,
-} from '@ai-sdk/provider-utils';
-import type { FetchFunction, ParseResult } from '@ai-sdk/provider-utils';
-import { z } from 'zod/v4';
-import type { LlamacppChatModelId } from './llamacpp-chat-options';
-import { llamacppLanguageModelOptions } from './llamacpp-chat-options';
-import { llamacppFailedResponseHandler } from './llamacpp-error';
-import { mapLlamacppFinishReason } from './map-llamacpp-finish-reason';
+} from "@ai-sdk/provider-utils";
+import type { FetchFunction, ParseResult } from "@ai-sdk/provider-utils";
+import { z } from "zod/v4";
+import type { LlamacppChatModelId } from "./llamacpp-chat-options";
+import { llamacppLanguageModelOptions } from "./llamacpp-chat-options";
+import { llamacppFailedResponseHandler } from "./llamacpp-error";
+import { mapLlamacppFinishReason } from "./map-llamacpp-finish-reason";
 
 type LlamacppChatConfig = {
   provider: string;
@@ -33,7 +33,7 @@ type CompletionResponse = z.infer<typeof llamacppCompletionResponseSchema>;
 type CompletionChunk = z.infer<typeof llamacppCompletionChunkSchema>;
 
 export class LlamacppChatLanguageModel implements LanguageModelV3 {
-  readonly specificationVersion = 'v3';
+  readonly specificationVersion = "v3";
   readonly modelId: LlamacppChatModelId;
 
   private readonly config: LlamacppChatConfig;
@@ -49,9 +49,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
 
   readonly supportedUrls: Record<string, RegExp[]> = {};
 
-  private async getArgs(
-    options: LanguageModelV3CallOptions,
-  ): Promise<{
+  private async getArgs(options: LanguageModelV3CallOptions): Promise<{
     args: Record<string, unknown>;
     warnings: LanguageModelV3CallWarning[];
   }> {
@@ -74,56 +72,42 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
 
     const llamacppOptions =
       (await parseProviderOptions({
-        provider: 'llamacpp',
+        provider: "llamacpp",
         providerOptions,
         schema: llamacppLanguageModelOptions,
       })) ?? {};
 
-    if (frequencyPenalty != null) {
-      warnings.push({
-        type: 'unsupported-setting',
-        setting: 'frequencyPenalty',
-      });
-    }
-
-    if (presencePenalty != null) {
-      warnings.push({
-        type: 'unsupported-setting',
-        setting: 'presencePenalty',
-      });
-    }
-
     if (tools != null || toolChoice != null) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'tools',
+        type: "unsupported-setting",
+        setting: "tools",
       });
     }
 
     const promptText = prompt
-      .map(message => {
-        if (message.role === 'system') {
+      .map((message) => {
+        if (message.role === "system") {
           return message.content;
         }
 
         const parts = Array.isArray(message.content)
           ? message.content
-          : [{ type: 'text', text: String(message.content) }];
+          : [{ type: "text", text: String(message.content) }];
 
         return parts
-          .filter(part => part.type === 'text')
-          .map(part => 'text' in part ? part.text : '')
-          .join('');
+          .filter((part) => part.type === "text")
+          .map((part) => ("text" in part ? part.text : ""))
+          .join("");
       })
-      .join('\n');
+      .join("\n");
 
     const args: Record<string, unknown> = {
       prompt: promptText,
-      n_predict: maxOutputTokens ?? -1,
+      n_predict: llamacppOptions.nPredict ?? maxOutputTokens ?? -1,
       temperature: llamacppOptions.temperature ?? temperature,
       top_p: llamacppOptions.topP ?? topP,
       top_k: llamacppOptions.topK ?? topK,
-      stop: stopSequences,
+      stop: llamacppOptions.stop ?? stopSequences,
       seed: llamacppOptions.seed ?? seed,
     };
 
@@ -138,6 +122,114 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     }
     if (llamacppOptions.repeatPenalty != null) {
       args.repeat_penalty = llamacppOptions.repeatPenalty;
+    }
+
+    const presence = llamacppOptions.presencePenalty ?? presencePenalty;
+    if (presence != null) {
+      args.presence_penalty = presence;
+    }
+
+    const frequency = llamacppOptions.frequencyPenalty ?? frequencyPenalty;
+    if (frequency != null) {
+      args.frequency_penalty = frequency;
+    }
+
+    if (llamacppOptions.dynatempRange != null) {
+      args.dynatemp_range = llamacppOptions.dynatempRange;
+    }
+    if (llamacppOptions.dynatempExponent != null) {
+      args.dynatemp_exponent = llamacppOptions.dynatempExponent;
+    }
+    if (llamacppOptions.minP != null) {
+      args.min_p = llamacppOptions.minP;
+    }
+    if (llamacppOptions.topNSigma != null) {
+      args.top_nsigma = llamacppOptions.topNSigma;
+    }
+    if (llamacppOptions.xtcProbability != null) {
+      args.xtc_probability = llamacppOptions.xtcProbability;
+    }
+    if (llamacppOptions.xtcThreshold != null) {
+      args.xtc_threshold = llamacppOptions.xtcThreshold;
+    }
+    if (llamacppOptions.typicalP != null) {
+      args.typical_p = llamacppOptions.typicalP;
+    }
+    if (llamacppOptions.repeatLastN != null) {
+      args.repeat_last_n = llamacppOptions.repeatLastN;
+    }
+    if (llamacppOptions.dryMultiplier != null) {
+      args.dry_multiplier = llamacppOptions.dryMultiplier;
+    }
+    if (llamacppOptions.dryBase != null) {
+      args.dry_base = llamacppOptions.dryBase;
+    }
+    if (llamacppOptions.dryAllowedLength != null) {
+      args.dry_allowed_length = llamacppOptions.dryAllowedLength;
+    }
+    if (llamacppOptions.dryPenaltyLastN != null) {
+      args.dry_penalty_last_n = llamacppOptions.dryPenaltyLastN;
+    }
+    if (llamacppOptions.drySequenceBreakers != null) {
+      args.dry_sequence_breakers = llamacppOptions.drySequenceBreakers;
+    }
+    if (llamacppOptions.minKeep != null) {
+      args.min_keep = llamacppOptions.minKeep;
+    }
+    if (llamacppOptions.nProbs != null) {
+      args.n_probs = llamacppOptions.nProbs;
+    }
+    if (llamacppOptions.samplers != null) {
+      args.samplers = llamacppOptions.samplers;
+    }
+    if (llamacppOptions.postSamplingProbs != null) {
+      args.post_sampling_probs = llamacppOptions.postSamplingProbs;
+    }
+    if (llamacppOptions.grammar != null) {
+      args.grammar = llamacppOptions.grammar;
+    }
+    if (llamacppOptions.jsonSchema != null) {
+      args.json_schema = llamacppOptions.jsonSchema;
+    }
+    if (llamacppOptions.logitBias != null) {
+      args.logit_bias = llamacppOptions.logitBias;
+    }
+    if (llamacppOptions.ignoreEos != null) {
+      args.ignore_eos = llamacppOptions.ignoreEos;
+    }
+    if (llamacppOptions.tMaxPredictMs != null) {
+      args.t_max_predict_ms = llamacppOptions.tMaxPredictMs;
+    }
+    if (llamacppOptions.nKeep != null) {
+      args.n_keep = llamacppOptions.nKeep;
+    }
+    if (llamacppOptions.nIndent != null) {
+      args.n_indent = llamacppOptions.nIndent;
+    }
+    if (llamacppOptions.idSlot != null) {
+      args.id_slot = llamacppOptions.idSlot;
+    }
+    if (llamacppOptions.cachePrompt != null) {
+      args.cache_prompt = llamacppOptions.cachePrompt;
+    }
+    if (llamacppOptions.returnTokens != null) {
+      args.return_tokens = llamacppOptions.returnTokens;
+    }
+    if (llamacppOptions.timingsPerToken != null) {
+      args.timings_per_token = llamacppOptions.timingsPerToken;
+    }
+    if (llamacppOptions.returnProgress != null) {
+      args.return_progress = llamacppOptions.returnProgress;
+    }
+    if (llamacppOptions.lora != null) {
+      args.lora = llamacppOptions.lora;
+    }
+    if (llamacppOptions.responseFields != null) {
+      args.response_fields = llamacppOptions.responseFields;
+    }
+
+    if (llamacppOptions.extraParams) {
+      Object.assign(args, llamacppOptions.extraParams);
     }
 
     return { args, warnings };
@@ -156,7 +248,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       body: args,
       failedResponseHandler: llamacppFailedResponseHandler,
       successfulResponseHandler: createJsonResponseHandler(
-        llamacppCompletionResponseSchema,
+        llamacppCompletionResponseSchema
       ),
       abortSignal: options.abortSignal,
       fetch: this.config.fetch,
@@ -165,7 +257,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     const content: LanguageModelV3Content[] = [];
 
     if (response.content) {
-      content.push({ type: 'text', text: response.content });
+      content.push({ type: "text", text: response.content });
     }
 
     const finishReason = mapLlamacppFinishReason(response.stop_type);
@@ -193,21 +285,20 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     const { args, warnings } = await this.getArgs(options);
     const body = { ...args, stream: true };
 
-    const { responseHeaders, value: response } = await postJsonToApi<
-      CompletionChunk
-    >({
-      url: `${this.config.baseURL}/completion`,
-      headers: combineHeaders(this.config.headers(), options.headers),
-      body,
-      failedResponseHandler: llamacppFailedResponseHandler,
-      successfulResponseHandler: createEventSourceResponseHandler(
-        llamacppCompletionChunkSchema,
-      ),
-      abortSignal: options.abortSignal,
-      fetch: this.config.fetch,
-    });
+    const { responseHeaders, value: response } =
+      await postJsonToApi<CompletionChunk>({
+        url: `${this.config.baseURL}/completion`,
+        headers: combineHeaders(this.config.headers(), options.headers),
+        body,
+        failedResponseHandler: llamacppFailedResponseHandler,
+        successfulResponseHandler: createEventSourceResponseHandler(
+          llamacppCompletionChunkSchema
+        ),
+        abortSignal: options.abortSignal,
+        fetch: this.config.fetch,
+      });
 
-    let finishReason: LanguageModelV3FinishReason = 'unknown';
+    let finishReason: LanguageModelV3FinishReason = "unknown";
     const usage: LanguageModelV3Usage = {
       inputTokens: undefined,
       outputTokens: undefined,
@@ -220,11 +311,11 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
         LanguageModelV3StreamPart
       >({
         start(controller) {
-          controller.enqueue({ type: 'stream-start', warnings });
+          controller.enqueue({ type: "stream-start", warnings });
         },
         transform(chunk, controller) {
           if (!chunk.success) {
-            controller.enqueue({ type: 'error', error: chunk.error });
+            controller.enqueue({ type: "error", error: chunk.error });
             return;
           }
 
@@ -241,8 +332,8 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
 
           if (value.content) {
             controller.enqueue({
-              type: 'text-delta',
-              id: '0',
+              type: "text-delta",
+              id: "0",
               delta: value.content,
             });
           }
@@ -252,10 +343,10 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
           }
         },
         flush(controller) {
-          controller.enqueue({ type: 'text-end', id: '0' });
-          controller.enqueue({ type: 'finish', finishReason, usage });
+          controller.enqueue({ type: "text-end", id: "0" });
+          controller.enqueue({ type: "finish", finishReason, usage });
         },
-      }),
+      })
     );
 
     return {
@@ -287,5 +378,3 @@ const llamacppCompletionChunkSchema = z.object({
   tokens_predicted: z.number().optional(),
   timings: llamacppCompletionTimingsSchema,
 });
-
-

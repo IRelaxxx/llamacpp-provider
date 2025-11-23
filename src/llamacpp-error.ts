@@ -1,5 +1,5 @@
-import { createJsonErrorResponseHandler } from '@ai-sdk/provider-utils';
-import { z } from 'zod/v4';
+import { createJsonErrorResponseHandler } from "@ai-sdk/provider-utils";
+import { z } from "zod/v4";
 
 const llamacppErrorDataSchema = z.object({
   error: z.object({
@@ -13,7 +13,5 @@ export type LlamacppErrorData = z.infer<typeof llamacppErrorDataSchema>;
 
 export const llamacppFailedResponseHandler = createJsonErrorResponseHandler({
   errorSchema: llamacppErrorDataSchema,
-  errorToMessage: data => data.error.message,
+  errorToMessage: (data) => data.error.message,
 });
-
-

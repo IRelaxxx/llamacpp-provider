@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pnpm build && node --test"
   },
   "keywords": [],
   "author": "",
@@ -30,7 +30,7 @@
   "devDependencies": {
     "tsdown": "^0.16.6",
     "typescript": "^5.9.3",
-    "zod": "^3.25.76"
+    "zod": "^4.1.8"
   },
   "engines": {
     "node": ">=20"

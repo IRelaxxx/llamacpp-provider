@@ -1,18 +1,18 @@
-import type { EmbeddingModelV3 } from '@ai-sdk/provider';
-import {
-  TooManyEmbeddingValuesForCallError,
-  type EmbeddingModelV3EmbedOptions,
-  type EmbeddingModelV3EmbedResponse,
-} from '@ai-sdk/provider';
+import type { EmbeddingModelV2 } from "@ai-sdk/provider";
+import { TooManyEmbeddingValuesForCallError } from "@ai-sdk/provider";
 import {
   combineHeaders,
   createJsonResponseHandler,
+  parseProviderOptions,
   type FetchFunction,
   postJsonToApi,
-} from '@ai-sdk/provider-utils';
-import { z } from 'zod/v4';
-import type { LlamacppEmbeddingModelId } from './llamacpp-embedding-options';
-import { llamacppFailedResponseHandler } from './llamacpp-error';
+} from "@ai-sdk/provider-utils";
+import { z } from "zod/v4";
+import {
+  llamacppEmbeddingOptions,
+  type LlamacppEmbeddingModelId,
+} from "./llamacpp-embedding-options";
+import { llamacppFailedResponseHandler } from "./llamacpp-error";
 
 type LlamacppEmbeddingConfig = {
   provider: string;
@@ -23,8 +23,8 @@ type LlamacppEmbeddingConfig = {
 
 type EmbeddingResponse = z.infer<typeof llamacppEmbeddingResponseSchema>;
 
-export class LlamacppEmbeddingModel implements EmbeddingModelV3<string> {
-  readonly specificationVersion = 'v3';
+export class LlamacppEmbeddingModel implements EmbeddingModelV2<string> {
+  readonly specificationVersion = "v3";
   readonly modelId: LlamacppEmbeddingModelId;
   readonly maxEmbeddingsPerCall = 32;
   readonly supportsParallelCalls = false;
@@ -33,7 +33,7 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV3<string> {
 
   constructor(
     modelId: LlamacppEmbeddingModelId,
-    config: LlamacppEmbeddingConfig,
+    config: LlamacppEmbeddingConfig
   ) {
     this.modelId = modelId;
     this.config = config;
@@ -47,8 +47,9 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV3<string> {
     values,
     abortSignal,
     headers,
-  }: EmbeddingModelV3EmbedOptions<string>): Promise<
-    EmbeddingModelV3EmbedResponse
+    providerOptions,
+  }: Parameters<EmbeddingModelV2<string>["doEmbed"]>[0]): Promise<
+    Awaited<ReturnType<EmbeddingModelV2<string>["doEmbed"]>>
   > {
     if (values.length > this.maxEmbeddingsPerCall) {
       throw new TooManyEmbeddingValuesForCallError({
@@ -59,6 +60,23 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV3<string> {
       });
     }
 
+    const llamacppOptions =
+      (await parseProviderOptions({
+        provider: "llamacpp",
+        providerOptions,
+        schema: llamacppEmbeddingOptions,
+      })) ?? {};
+
+    const body: Record<string, unknown> = {
+      model: this.modelId,
+      input: values,
+      encoding_format: "float",
+    };
+
+    if (llamacppOptions.embdNormalize != null) {
+      body.embd_normalize = llamacppOptions.embdNormalize;
+    }
+
     const {
       responseHeaders,
       value: response,
@@ -66,21 +84,17 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV3<string> {
     } = await postJsonToApi<EmbeddingResponse>({
       url: `${this.config.baseURL}/embeddings`,
       headers: combineHeaders(this.config.headers(), headers),
-      body: {
-        model: this.modelId,
-        input: values,
-        encoding_format: 'float',
-      },
+      body,
       failedResponseHandler: llamacppFailedResponseHandler,
       successfulResponseHandler: createJsonResponseHandler(
-        llamacppEmbeddingResponseSchema,
+        llamacppEmbeddingResponseSchema
       ),
       abortSignal,
       fetch: this.config.fetch,
     });
 
     return {
-      embeddings: response.data.map(item => item.embedding),
+      embeddings: response.data.map((item) => item.embedding),
       usage: response.usage
         ? { tokens: response.usage.prompt_tokens }
         : undefined,
@@ -97,5 +111,3 @@ const llamacppEmbeddingResponseSchema = z.object({
     })
     .nullish(),
 });
-
-
