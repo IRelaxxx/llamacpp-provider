@@ -1,16 +1,18 @@
 {
   "name": "@akrahl/llamacpp-provider",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "type": "module",
-  "files": ["dist"],
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
     }
   },
   "scripts": {
@@ -20,16 +22,16 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.21.0",
+  "packageManager": "pnpm@10.26.1",
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.17"
   },
   "peerDependencies": {
-    "zod": "^3.25.76 || ^4.1.8"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
-    "tsdown": "^0.16.6",
+    "tsdown": "^0.18.2",
     "typescript": "^5.9.3",
     "zod": "^4.1.8"
   },
