@@ -320,6 +320,8 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       },
     };
 
+    let textStarted = false;
+
     const stream = response.pipeThrough(
       new TransformStream<
         ParseResult<CompletionChunk>,
@@ -342,6 +344,10 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
           }
 
           if (value.content) {
+            if (!textStarted) {
+              controller.enqueue({ type: "text-start", id: "0" });
+              textStarted = true;
+            }
             controller.enqueue({
               type: "text-delta",
               id: "0",
@@ -354,7 +360,9 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
           }
         },
         flush(controller) {
-          controller.enqueue({ type: "text-end", id: "0" });
+          if (textStarted) {
+            controller.enqueue({ type: "text-end", id: "0" });
+          }
           controller.enqueue({ type: "finish", finishReason, usage });
         },
       })
