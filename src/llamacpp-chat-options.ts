@@ -42,7 +42,7 @@ export const llamacppLanguageModelOptions = z.object({
   jsonSchema: z.unknown().optional(),
   logitBias: z
     .union([
-      z.record(z.number().or(z.boolean())),
+      z.record(z.string(), z.number().or(z.boolean())),
       z.array(
         z.tuple([
           z.union([z.number(), z.string()]),
@@ -71,7 +71,7 @@ export const llamacppLanguageModelOptions = z.object({
   responseFields: z.array(z.string()).optional(),
 
   // request-level escape hatch (merged last into the body)
-  extraParams: z.record(z.unknown()).optional(),
+  extraParams: z.record(z.string(), z.unknown()).optional(),
 
   // legacy convenience
   repeatPenalty: z.number().optional(),

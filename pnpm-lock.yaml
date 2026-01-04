@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@ai-sdk/provider':
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^3.0.1
+        version: 3.0.1
       '@ai-sdk/provider-utils':
-        specifier: ^3.0.17
-        version: 3.0.17(zod@4.1.12)
+        specifier: ^4.0.2
+        version: 4.0.2(zod@4.1.12)
     devDependencies:
       tsdown:
         specifier: ^0.18.2
@@ -27,14 +27,14 @@ importers:
 
 packages:
 
-  '@ai-sdk/provider-utils@3.0.17':
-    resolution: {integrity: sha512-TR3Gs4I3Tym4Ll+EPdzRdvo/rc8Js6c4nVhFLuvGLX/Y4V9ZcQMa/HTiYsHEgmYrf1zVi6Q145UEZUfleOwOjw==}
+  '@ai-sdk/provider-utils@4.0.2':
+    resolution: {integrity: sha512-KaykkuRBdF/ffpI5bwpL4aSCmO/99p8/ci+VeHwJO8tmvXtiVAb99QeyvvvXmL61e9Zrvv4GBGoajW19xdjkVQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/provider@2.0.0':
-    resolution: {integrity: sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==}
+  '@ai-sdk/provider@3.0.1':
+    resolution: {integrity: sha512-2lR4w7mr9XrydzxBSjir4N6YMGdXD+Np1Sh0RXABh7tWdNFFwIeRI1Q+SaYZMbfL8Pg8RRLcrxQm51yxTLhokg==}
     engines: {node: '>=18'}
 
   '@babel/generator@7.28.5':
@@ -169,8 +169,8 @@ packages:
   '@rolldown/pluginutils@1.0.0-beta.55':
     resolution: {integrity: sha512-vajw/B3qoi7aYnnD4BQ4VoCcXQWnF0roSwE2iynbNxgW4l9mFwtLmLmUhpDdcTBfKyZm1p/T0D13qG94XBLohA==}
 
-  '@standard-schema/spec@1.0.0':
-    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
+  '@standard-schema/spec@1.1.0':
+    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -345,14 +345,14 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/provider-utils@3.0.17(zod@4.1.12)':
+  '@ai-sdk/provider-utils@4.0.2(zod@4.1.12)':
     dependencies:
-      '@ai-sdk/provider': 2.0.0
-      '@standard-schema/spec': 1.0.0
+      '@ai-sdk/provider': 3.0.1
+      '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.1.12
 
-  '@ai-sdk/provider@2.0.0':
+  '@ai-sdk/provider@3.0.1':
     dependencies:
       json-schema: 0.4.0
 
@@ -463,7 +463,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.0-beta.55': {}
 
-  '@standard-schema/spec@1.0.0': {}
+  '@standard-schema/spec@1.1.0': {}
 
   '@tybys/wasm-util@0.10.1':
     dependencies:

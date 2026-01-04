@@ -1,20 +1,18 @@
-import type { LanguageModelV3FinishReason } from '@ai-sdk/provider';
+import type { LanguageModelV3FinishReason } from "@ai-sdk/provider";
 
 export function mapLlamacppFinishReason(
-  stopType: string | null | undefined,
+  stopType: string | null | undefined
 ): LanguageModelV3FinishReason {
   switch (stopType) {
-    case 'eos':
-      return 'stop';
-    case 'limit':
-      return 'length';
-    case 'word':
-      return 'stop';
-    case 'none':
-      return 'unknown';
+    case "eos":
+      return { unified: "stop", raw: "eos" };
+    case "limit":
+      return { unified: "length", raw: "limit" };
+    case "word":
+      return { unified: "stop", raw: "word" };
+    case "none":
+      return { unified: "other", raw: "none" };
     default:
-      return 'unknown';
+      return { unified: "other", raw: "unknown" };
   }
 }
-
-

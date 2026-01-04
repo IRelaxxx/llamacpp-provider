@@ -1,4 +1,4 @@
-import type { EmbeddingModelV2 } from "@ai-sdk/provider";
+import type { EmbeddingModelV3 } from "@ai-sdk/provider";
 import { TooManyEmbeddingValuesForCallError } from "@ai-sdk/provider";
 import {
   combineHeaders,
@@ -23,7 +23,7 @@ type LlamacppEmbeddingConfig = {
 
 type EmbeddingResponse = z.infer<typeof llamacppEmbeddingResponseSchema>;
 
-export class LlamacppEmbeddingModel implements EmbeddingModelV2<string> {
+export class LlamacppEmbeddingModel implements EmbeddingModelV3 {
   readonly specificationVersion = "v3";
   readonly modelId: LlamacppEmbeddingModelId;
   readonly maxEmbeddingsPerCall = 32;
@@ -48,8 +48,8 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV2<string> {
     abortSignal,
     headers,
     providerOptions,
-  }: Parameters<EmbeddingModelV2<string>["doEmbed"]>[0]): Promise<
-    Awaited<ReturnType<EmbeddingModelV2<string>["doEmbed"]>>
+  }: Parameters<EmbeddingModelV3["doEmbed"]>[0]): Promise<
+    Awaited<ReturnType<EmbeddingModelV3["doEmbed"]>>
   > {
     if (values.length > this.maxEmbeddingsPerCall) {
       throw new TooManyEmbeddingValuesForCallError({
@@ -99,6 +99,7 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV2<string> {
         ? { tokens: response.usage.prompt_tokens }
         : undefined,
       response: { headers: responseHeaders, body: rawValue },
+      warnings: [],
     };
   }
 }

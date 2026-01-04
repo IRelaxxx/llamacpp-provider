@@ -1,11 +1,11 @@
 import type {
   LanguageModelV3,
   LanguageModelV3CallOptions,
-  LanguageModelV3CallWarning,
   LanguageModelV3Content,
   LanguageModelV3FinishReason,
   LanguageModelV3StreamPart,
   LanguageModelV3Usage,
+  SharedV3Warning,
 } from "@ai-sdk/provider";
 import {
   combineHeaders,
@@ -51,7 +51,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
 
   private async getArgs(options: LanguageModelV3CallOptions): Promise<{
     args: Record<string, unknown>;
-    warnings: LanguageModelV3CallWarning[];
+    warnings: SharedV3Warning[];
   }> {
     const {
       prompt,
@@ -68,7 +68,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       toolChoice,
     } = options;
 
-    const warnings: LanguageModelV3CallWarning[] = [];
+    const warnings: SharedV3Warning[] = [];
 
     const llamacppOptions =
       (await parseProviderOptions({
@@ -79,8 +79,8 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
 
     if (tools != null || toolChoice != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "tools",
+        type: "unsupported",
+        feature: "tools",
       });
     }
 
@@ -263,12 +263,17 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     const finishReason = mapLlamacppFinishReason(response.stop_type);
 
     const usage: LanguageModelV3Usage = {
-      inputTokens: response.tokens_evaluated,
-      outputTokens: response.tokens_predicted,
-      totalTokens:
-        response.tokens_evaluated != null && response.tokens_predicted != null
-          ? response.tokens_evaluated + response.tokens_predicted
-          : undefined,
+      inputTokens: {
+        total: response.tokens_evaluated,
+        noCache: undefined,
+        cacheRead: undefined,
+        cacheWrite: undefined,
+      },
+      outputTokens: {
+        total: response.tokens_predicted,
+        text: response.tokens_predicted,
+        reasoning: 0,
+      },
     };
 
     return {
@@ -285,24 +290,34 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     const { args, warnings } = await this.getArgs(options);
     const body = { ...args, stream: true };
 
-    const { responseHeaders, value: response } =
-      await postJsonToApi<CompletionChunk>({
-        url: `${this.config.baseURL}/completion`,
-        headers: combineHeaders(this.config.headers(), options.headers),
-        body,
-        failedResponseHandler: llamacppFailedResponseHandler,
-        successfulResponseHandler: createEventSourceResponseHandler(
-          llamacppCompletionChunkSchema
-        ),
-        abortSignal: options.abortSignal,
-        fetch: this.config.fetch,
-      });
+    const { responseHeaders, value: response } = await postJsonToApi({
+      url: `${this.config.baseURL}/completion`,
+      headers: combineHeaders(this.config.headers(), options.headers),
+      body,
+      failedResponseHandler: llamacppFailedResponseHandler,
+      successfulResponseHandler: createEventSourceResponseHandler(
+        llamacppCompletionChunkSchema
+      ),
+      abortSignal: options.abortSignal,
+      fetch: this.config.fetch,
+    });
 
-    let finishReason: LanguageModelV3FinishReason = "unknown";
+    let finishReason: LanguageModelV3FinishReason = {
+      unified: "other",
+      raw: "unknown",
+    };
     const usage: LanguageModelV3Usage = {
-      inputTokens: undefined,
-      outputTokens: undefined,
-      totalTokens: undefined,
+      inputTokens: {
+        total: undefined,
+        noCache: undefined,
+        cacheRead: undefined,
+        cacheWrite: undefined,
+      },
+      outputTokens: {
+        total: undefined,
+        text: undefined,
+        reasoning: 0,
+      },
     };
 
     const stream = response.pipeThrough(
@@ -322,12 +337,8 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
           const value = chunk.value;
 
           if (value.timings) {
-            usage.inputTokens = value.tokens_evaluated;
-            usage.outputTokens = value.tokens_predicted;
-            usage.totalTokens =
-              value.tokens_evaluated != null && value.tokens_predicted != null
-                ? value.tokens_evaluated + value.tokens_predicted
-                : undefined;
+            usage.inputTokens.total = value.tokens_evaluated;
+            usage.outputTokens.total = value.tokens_predicted;
           }
 
           if (value.content) {

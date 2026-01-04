@@ -23,11 +23,10 @@ export interface LlamacppProvider extends ProviderV3 {
   languageModel(modelId: LlamacppChatModelId): LanguageModelV3;
   chat(modelId: LlamacppChatModelId): LanguageModelV3;
 
-  embedding(modelId: LlamacppEmbeddingModelId): EmbeddingModelV3<string>;
-  textEmbedding(modelId: LlamacppEmbeddingModelId): EmbeddingModelV3<string>;
-  textEmbeddingModel(
-    modelId: LlamacppEmbeddingModelId
-  ): EmbeddingModelV3<string>;
+  embedding(modelId: LlamacppEmbeddingModelId): EmbeddingModelV3;
+  embeddingModel(modelId: LlamacppEmbeddingModelId): EmbeddingModelV3;
+  textEmbedding(modelId: LlamacppEmbeddingModelId): EmbeddingModelV3;
+  textEmbeddingModel(modelId: LlamacppEmbeddingModelId): EmbeddingModelV3;
 }
 
 export interface LlamacppProviderSettings {
@@ -53,7 +52,6 @@ export function createLlamacpp(
       apiKey: options.apiKey,
       environmentVariableName: "LLAMACPP_API_KEY",
       description: "llama.cpp",
-      isOptional: true,
     });
 
     if (apiKey) {
@@ -89,12 +87,13 @@ export function createLlamacpp(
     }
 
     return createChatModel(modelId);
-  } as LlamacppProvider;
+  };
 
-  provider.specificationVersion = "v3";
+  provider.specificationVersion = "v3" as const;
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
   provider.embedding = createEmbeddingModel;
+  provider.embeddingModel = createEmbeddingModel;
   provider.textEmbedding = createEmbeddingModel;
   provider.textEmbeddingModel = createEmbeddingModel;
 
