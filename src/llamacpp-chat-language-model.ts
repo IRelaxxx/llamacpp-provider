@@ -190,7 +190,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       args.grammar = llamacppOptions.grammar;
     }
 
-    if (responseFormat?.type === 'json') {
+    if (responseFormat?.type === "json") {
       if (responseFormat.schema) {
         args.json_schema = responseFormat.schema;
       }
