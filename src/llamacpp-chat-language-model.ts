@@ -66,6 +66,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       providerOptions,
       tools,
       toolChoice,
+      responseFormat,
     } = options;
 
     const warnings: SharedV3Warning[] = [];
@@ -188,7 +189,12 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     if (llamacppOptions.grammar != null) {
       args.grammar = llamacppOptions.grammar;
     }
-    if (llamacppOptions.jsonSchema != null) {
+
+    if (responseFormat?.type === 'json') {
+      if (responseFormat.schema) {
+        args.json_schema = responseFormat.schema;
+      }
+    } else if (llamacppOptions.jsonSchema != null) {
       args.json_schema = llamacppOptions.jsonSchema;
     }
     if (llamacppOptions.logitBias != null) {
