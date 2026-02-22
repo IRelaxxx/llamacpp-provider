@@ -8,6 +8,8 @@ const loraAdapterSchema = z.object({
 });
 
 export const llamacppLanguageModelOptions = z.object({
+  model: z.string().optional(),
+
   // basic sampling
   temperature: z.number().optional(),
   topP: z.number().optional(),

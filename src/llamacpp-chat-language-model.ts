@@ -103,6 +103,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       .join("\n");
 
     const args: Record<string, unknown> = {
+      model: llamacppOptions.model ?? this.modelId,
       prompt: promptText,
       n_predict: llamacppOptions.nPredict ?? maxOutputTokens ?? -1,
       temperature: llamacppOptions.temperature ?? temperature,

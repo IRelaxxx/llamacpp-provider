@@ -1,6 +1,6 @@
 {
   "name": "@akrahl/llamacpp-provider",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "",
   "type": "module",
   "files": [
@@ -18,21 +18,22 @@
   "scripts": {
     "build": "tsdown",
     "test": "pnpm build && node --test",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "publish": "pnpm build && npm publish --access=public"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.26.1",
   "dependencies": {
-    "@ai-sdk/provider": "^3.0.1",
-    "@ai-sdk/provider-utils": "^4.0.2"
+    "@ai-sdk/provider": "^3.0.8",
+    "@ai-sdk/provider-utils": "^4.0.15"
   },
   "peerDependencies": {
     "zod": "^4.1.8"
   },
   "devDependencies": {
-    "tsdown": "^0.18.2",
+    "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
     "zod": "^4.1.8"
   },

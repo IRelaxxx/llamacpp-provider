@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLlamacpp } from '../dist/index.js';
+import { createLlamacpp } from '../dist/index.mjs';
 
 test('llamacpp providerOptions map to completion body', async () => {
   const bodies = [];
 
   const llamacpp = createLlamacpp({
     baseURL: 'http://localhost',
+    apiKey: 'test-key',
     fetch: async (_input, init) => {
       if (init?.body) {
         bodies.push(JSON.parse(init.body));
@@ -56,6 +57,7 @@ test('llamacpp providerOptions map to completion body', async () => {
   const body = bodies[0];
 
   assert.equal(body.n_predict, 42);
+  assert.equal(body.model, 'test-model');
   assert.equal(body.temperature, 0.5);
   assert.equal(body.dynatemp_range, 0.3);
   assert.deepEqual(body.dry_sequence_breakers, ['\n', ':']);
@@ -66,6 +68,23 @@ test('llamacpp providerOptions map to completion body', async () => {
   assert.deepEqual(body.logit_bias, { Hello: -1 });
   assert.deepEqual(body.lora, [{ id: 0, scale: 0.5 }]);
   assert.equal(body.custom_flag, 1);
+
+  await model.doGenerate({
+    prompt: [
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'Hello again' }],
+      },
+    ],
+    providerOptions: {
+      llamacpp: {
+        model: 'override-model',
+      },
+    },
+  });
+
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[1].model, 'override-model');
 });
 
 
