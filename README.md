@@ -1,1 +1,1 @@
-Videcoded llamacpp provider for ai sdk 6
+Vibecoded llamacpp provider for ai sdk 6

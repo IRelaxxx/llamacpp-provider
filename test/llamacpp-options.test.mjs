@@ -53,6 +53,7 @@ test('llamacpp providerOptions map to completion body', async () => {
         jsonSchema: { type: 'object', properties: { answer: { type: 'string' } } },
         logitBias: { Hello: -1 },
         lora: [{ id: 0, scale: 0.5 }],
+        prefill: ' should-not-apply',
         extraParams: { custom_flag: 1 },
       },
     },
@@ -75,6 +76,22 @@ test('llamacpp providerOptions map to completion body', async () => {
   assert.deepEqual(body.lora, [{ id: 0, scale: 0.5 }]);
   assert.equal(body.custom_flag, 1);
 
+  const firstResult = await model.doGenerate({
+    prompt: [{ role: 'user', content: [{ type: 'text', text: 'warn me' }] }],
+    providerOptions: {
+      llamacpp: {
+        prefill: 'prefill-without-template',
+      },
+    },
+  });
+
+  assert.ok(
+    firstResult.warnings.some(
+      (warning) =>
+        warning.type === 'unsupported' && warning.feature === 'prefillWithoutApplyTemplate',
+    ),
+  );
+
   await model.doGenerate({
     prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello again' }] }],
     providerOptions: {
@@ -84,9 +101,9 @@ test('llamacpp providerOptions map to completion body', async () => {
     },
   });
 
-  assert.equal(completionBodies.length, 2);
-  assert.equal(completionBodies[1].model, 'override-model');
-  assert.equal(completionBodies[1].prompt, 'Hello again');
+  assert.equal(completionBodies.length, 3);
+  assert.equal(completionBodies[2].model, 'override-model');
+  assert.equal(completionBodies[2].prompt, 'Hello again');
 });
 
 test('llamacpp apply-template is opt-in', async () => {
@@ -153,13 +170,14 @@ test('llamacpp apply-template is opt-in', async () => {
       llamacpp: {
         stop: ['B', 'C'],
         useApplyTemplate: true,
+        prefill: ' Sure!',
       },
     },
   });
 
   assert.equal(templateBodies.length, 1);
   assert.equal(completionBodies.length, 1);
-  assert.equal(completionBodies[0].prompt, 'templated-chat-prompt');
+  assert.equal(completionBodies[0].prompt, 'templated-chat-prompt Sure!');
   assert.deepEqual(completionBodies[0].stop, ['A', 'B', 'C']);
   assert.deepEqual(templateBodies[0].messages, [
     { role: 'system', content: 'You are precise.' },
@@ -272,4 +290,57 @@ test('llamacpp stream usage updates without timings and uses generateId', async 
   assert.equal(finish?.usage.inputTokens.total, 3);
   assert.equal(finish?.usage.outputTokens.total, 2);
   assert.equal(finish?.usage.outputTokens.text, 2);
+});
+
+test('llamacpp apply-template prefill works for stream', async () => {
+  const calls = [];
+  const llamacpp = createLlamacpp({
+    baseURL: 'http://localhost',
+    apiKey: 'test-key',
+    fetch: async (input, init) => {
+      const url = String(input);
+
+      if (init?.body) {
+        calls.push({ url, body: JSON.parse(init.body) });
+      }
+
+      if (url.endsWith('/apply-template')) {
+        return new Response(JSON.stringify({ prompt: 'templated-stream' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+
+      if (!url.endsWith('/completion')) {
+        throw new Error(`Unexpected URL: ${url}`);
+      }
+
+      const sse = ['data: {"content":"x"}', '', 'data: [DONE]', ''].join('\n');
+
+      return new Response(sse, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      });
+    },
+  });
+
+  const model = llamacpp.languageModel('test-model');
+  const { stream } = await model.doStream({
+    prompt: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+    providerOptions: {
+      llamacpp: {
+        useApplyTemplate: true,
+        prefill: ' world',
+      },
+    },
+  });
+
+  for await (const part of stream) {
+    void part;
+  }
+
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, 'http://localhost/apply-template');
+  assert.equal(calls[1].url, 'http://localhost/completion');
+  assert.equal(calls[1].body.prompt, 'templated-stream world');
 });

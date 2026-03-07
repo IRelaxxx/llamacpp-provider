@@ -86,12 +86,22 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       });
     }
 
+    if (llamacppOptions.prefill && !llamacppOptions.useApplyTemplate) {
+      warnings.push({
+        type: "unsupported",
+        feature: "prefillWithoutApplyTemplate",
+      });
+    }
+
     const promptText = llamacppOptions.useApplyTemplate
-      ? await this.applyTemplate({
-          prompt,
-          headers: options.headers,
-          abortSignal: options.abortSignal,
-        })
+      ? addPrefill(
+          await this.applyTemplate({
+            prompt,
+            headers: options.headers,
+            abortSignal: options.abortSignal,
+          }),
+          llamacppOptions.prefill
+        )
       : serializePrompt(prompt);
     const stop = mergeStopSequences(stopSequences, llamacppOptions.stop);
 
@@ -459,4 +469,12 @@ function serializePrompt(prompt: LanguageModelV3CallOptions["prompt"]) {
         .join("");
     })
     .join("\n");
+}
+
+function addPrefill(prompt: string, prefill: string | undefined) {
+  if (prefill == null || prefill.length === 0) {
+    return prompt;
+  }
+
+  return `${prompt}${prefill}`;
 }
