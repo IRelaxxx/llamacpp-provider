@@ -1,6 +1,6 @@
 {
   "name": "@akrahl/llamacpp-provider",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "",
   "type": "module",
   "files": [
@@ -17,7 +17,9 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test": "pnpm build && node --test",
+    "test": "pnpm build && node --test test/**/*.test.mjs",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "pnpm lint --fix",
     "tsc": "tsc --noEmit",
     "publish": "pnpm build && npm publish --access=public"
   },
@@ -33,8 +35,11 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.2",
     "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
     "zod": "^4.1.8"
   },
   "engines": {

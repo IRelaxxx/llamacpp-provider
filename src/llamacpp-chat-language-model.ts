@@ -16,6 +16,7 @@ import {
 } from "@ai-sdk/provider-utils";
 import type { FetchFunction, ParseResult } from "@ai-sdk/provider-utils";
 import { z } from "zod/v4";
+import { convertToLlamacppChatMessages } from "./convert-to-llamacpp-chat-messages";
 import type { LlamacppChatModelId } from "./llamacpp-chat-options";
 import { llamacppLanguageModelOptions } from "./llamacpp-chat-options";
 import { llamacppFailedResponseHandler } from "./llamacpp-error";
@@ -85,22 +86,14 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       });
     }
 
-    const promptText = prompt
-      .map((message) => {
-        if (message.role === "system") {
-          return message.content;
-        }
-
-        const parts = Array.isArray(message.content)
-          ? message.content
-          : [{ type: "text", text: String(message.content) }];
-
-        return parts
-          .filter((part) => part.type === "text")
-          .map((part) => ("text" in part ? part.text : ""))
-          .join("");
-      })
-      .join("\n");
+    const promptText = llamacppOptions.useApplyTemplate
+      ? await this.applyTemplate({
+          prompt,
+          headers: options.headers,
+          abortSignal: options.abortSignal,
+        })
+      : serializePrompt(prompt);
+    const stop = mergeStopSequences(stopSequences, llamacppOptions.stop);
 
     const args: Record<string, unknown> = {
       model: llamacppOptions.model ?? this.modelId,
@@ -109,7 +102,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       temperature: llamacppOptions.temperature ?? temperature,
       top_p: llamacppOptions.topP ?? topP,
       top_k: llamacppOptions.topK ?? topK,
-      stop: llamacppOptions.stop ?? stopSequences,
+      stop,
       seed: llamacppOptions.seed ?? seed,
     };
 
@@ -242,6 +235,32 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     return { args, warnings };
   }
 
+  private async applyTemplate({
+    prompt,
+    headers,
+    abortSignal,
+  }: {
+    prompt: LanguageModelV3CallOptions["prompt"];
+    headers: LanguageModelV3CallOptions["headers"];
+    abortSignal: LanguageModelV3CallOptions["abortSignal"];
+  }) {
+    const { value } = await postJsonToApi({
+      url: `${this.config.baseURL}/apply-template`,
+      headers: combineHeaders(this.config.headers(), headers),
+      body: {
+        messages: convertToLlamacppChatMessages(prompt),
+      },
+      failedResponseHandler: llamacppFailedResponseHandler,
+      successfulResponseHandler: createJsonResponseHandler(
+        llamacppApplyTemplateResponseSchema
+      ),
+      abortSignal,
+      fetch: this.config.fetch,
+    });
+
+    return value.prompt;
+  }
+
   async doGenerate(options: LanguageModelV3CallOptions) {
     const { args, warnings } = await this.getArgs(options);
 
@@ -328,6 +347,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
     };
 
     let textStarted = false;
+    const textId = this.config.generateId();
 
     const stream = response.pipeThrough(
       new TransformStream<
@@ -345,19 +365,22 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
 
           const value = chunk.value;
 
-          if (value.timings) {
+          if (value.tokens_evaluated != null) {
             usage.inputTokens.total = value.tokens_evaluated;
+          }
+          if (value.tokens_predicted != null) {
             usage.outputTokens.total = value.tokens_predicted;
+            usage.outputTokens.text = value.tokens_predicted;
           }
 
           if (value.content) {
             if (!textStarted) {
-              controller.enqueue({ type: "text-start", id: "0" });
+              controller.enqueue({ type: "text-start", id: textId });
               textStarted = true;
             }
             controller.enqueue({
               type: "text-delta",
-              id: "0",
+              id: textId,
               delta: value.content,
             });
           }
@@ -368,7 +391,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
         },
         flush(controller) {
           if (textStarted) {
-            controller.enqueue({ type: "text-end", id: "0" });
+            controller.enqueue({ type: "text-end", id: textId });
           }
           controller.enqueue({ type: "finish", finishReason, usage });
         },
@@ -404,3 +427,36 @@ const llamacppCompletionChunkSchema = z.object({
   tokens_predicted: z.number().optional(),
   timings: llamacppCompletionTimingsSchema,
 });
+
+const llamacppApplyTemplateResponseSchema = z.object({
+  prompt: z.string(),
+});
+
+function mergeStopSequences(
+  stopSequences: string[] | undefined,
+  providerStop: string[] | undefined
+) {
+  if (stopSequences == null && providerStop == null) {
+    return undefined;
+  }
+
+  return [...new Set([...(stopSequences ?? []), ...(providerStop ?? [])])];
+}
+
+function serializePrompt(prompt: LanguageModelV3CallOptions["prompt"]) {
+  return prompt
+    .map((message) => {
+      if (message.role === "system") {
+        return message.content;
+      }
+
+      const parts = Array.isArray(message.content)
+        ? message.content
+        : [{ type: "text", text: String(message.content) }];
+
+      return parts
+        .map((part) => (part.type === "text" ? part.text : ""))
+        .join("");
+    })
+    .join("\n");
+}

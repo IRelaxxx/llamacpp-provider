@@ -79,7 +79,6 @@ export function createLlamacpp(
     });
 
   const provider = function (modelId: LlamacppChatModelId) {
-    // eslint-disable-next-line @typescript-eslint/no-invalid-this
     if (new.target) {
       throw new Error(
         "The LLaMA.cpp model function cannot be called with the new keyword."

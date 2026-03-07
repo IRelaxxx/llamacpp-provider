@@ -51,21 +51,24 @@ export class LlamacppEmbeddingModel implements EmbeddingModelV3 {
   }: Parameters<EmbeddingModelV3["doEmbed"]>[0]): Promise<
     Awaited<ReturnType<EmbeddingModelV3["doEmbed"]>>
   > {
-    if (values.length > this.maxEmbeddingsPerCall) {
-      throw new TooManyEmbeddingValuesForCallError({
-        provider: this.provider,
-        modelId: this.modelId,
-        maxEmbeddingsPerCall: this.maxEmbeddingsPerCall,
-        values,
-      });
-    }
-
     const llamacppOptions =
       (await parseProviderOptions({
         provider: "llamacpp",
         providerOptions,
         schema: llamacppEmbeddingOptions,
       })) ?? {};
+
+    const maxEmbeddingsPerCall =
+      llamacppOptions.maxEmbeddingsPerCall ?? this.maxEmbeddingsPerCall;
+
+    if (values.length > maxEmbeddingsPerCall) {
+      throw new TooManyEmbeddingValuesForCallError({
+        provider: this.provider,
+        modelId: this.modelId,
+        maxEmbeddingsPerCall,
+        values,
+      });
+    }
 
     const body: Record<string, unknown> = {
       model: this.modelId,
