@@ -41,7 +41,7 @@ test('llamacpp providerOptions map to completion body', async () => {
 
   const model = llamacpp.languageModel('test-model');
 
-  await model.doGenerate({
+  const firstGenerateResult = await model.doGenerate({
     prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }],
     maxOutputTokens: 16,
     temperature: 0.5,
@@ -75,6 +75,7 @@ test('llamacpp providerOptions map to completion body', async () => {
   assert.deepEqual(body.logit_bias, { Hello: -1 });
   assert.deepEqual(body.lora, [{ id: 0, scale: 0.5 }]);
   assert.equal(body.custom_flag, 1);
+  assert.equal(firstGenerateResult.providerMetadata, undefined);
 
   const firstResult = await model.doGenerate({
     prompt: [{ role: 'user', content: [{ type: 'text', text: 'warn me' }] }],
@@ -171,6 +172,7 @@ test('llamacpp apply-template is opt-in', async () => {
         stop: ['B', 'C'],
         useApplyTemplate: true,
         prefill: ' Sure!',
+        includeRenderedPromptMetadata: true,
       },
     },
   });
@@ -204,6 +206,63 @@ test('llamacpp apply-template is opt-in', async () => {
     },
   ]);
   assert.equal(result.warnings.length, 0);
+  assert.deepEqual(result.providerMetadata, {
+    llamacpp: {
+      renderedPrompt: 'templated-chat-prompt Sure!',
+      renderedPromptSource: 'apply-template',
+      useApplyTemplate: true,
+    },
+  });
+});
+
+test('llamacpp can include serializer rendered prompt metadata', async () => {
+  const completionBodies = [];
+  const llamacpp = createLlamacpp({
+    baseURL: 'http://localhost',
+    apiKey: 'test-key',
+    fetch: async (_input, init) => {
+      if (init?.body) {
+        completionBodies.push(JSON.parse(init.body));
+      }
+
+      return new Response(
+        JSON.stringify({
+          content: 'ok',
+          stop_type: 'eos',
+          tokens_evaluated: 1,
+          tokens_predicted: 1,
+          timings: {},
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    },
+  });
+
+  const model = llamacpp.languageModel('test-model');
+  const result = await model.doGenerate({
+    prompt: [
+      { role: 'system', content: 'System one' },
+      { role: 'user', content: [{ type: 'text', text: 'User one' }] },
+    ],
+    providerOptions: {
+      llamacpp: {
+        includeRenderedPromptMetadata: true,
+      },
+    },
+  });
+
+  assert.equal(completionBodies.length, 1);
+  assert.equal(completionBodies[0].prompt, 'System one\nUser one');
+  assert.deepEqual(result.providerMetadata, {
+    llamacpp: {
+      renderedPrompt: 'System one\nUser one',
+      renderedPromptSource: 'serializer',
+      useApplyTemplate: false,
+    },
+  });
 });
 
 test('llamacpp embedding honors maxEmbeddingsPerCall provider option', async () => {
@@ -290,6 +349,7 @@ test('llamacpp stream usage updates without timings and uses generateId', async 
   assert.equal(finish?.usage.inputTokens.total, 3);
   assert.equal(finish?.usage.outputTokens.total, 2);
   assert.equal(finish?.usage.outputTokens.text, 2);
+  assert.equal(finish?.providerMetadata, undefined);
 });
 
 test('llamacpp apply-template prefill works for stream', async () => {
@@ -331,16 +391,27 @@ test('llamacpp apply-template prefill works for stream', async () => {
       llamacpp: {
         useApplyTemplate: true,
         prefill: ' world',
+        includeRenderedPromptMetadata: true,
       },
     },
   });
 
+  const parts = [];
   for await (const part of stream) {
-    void part;
+    parts.push(part);
   }
 
   assert.equal(calls.length, 2);
   assert.equal(calls[0].url, 'http://localhost/apply-template');
   assert.equal(calls[1].url, 'http://localhost/completion');
   assert.equal(calls[1].body.prompt, 'templated-stream world');
+
+  const finish = parts.find((part) => part.type === 'finish');
+  assert.deepEqual(finish?.providerMetadata, {
+    llamacpp: {
+      renderedPrompt: 'templated-stream world',
+      renderedPromptSource: 'apply-template',
+      useApplyTemplate: true,
+    },
+  });
 });

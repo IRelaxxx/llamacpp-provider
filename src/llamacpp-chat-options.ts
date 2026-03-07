@@ -11,6 +11,7 @@ export const llamacppLanguageModelOptions = z.object({
   model: z.string().optional(),
   useApplyTemplate: z.boolean().optional(),
   prefill: z.string().optional(),
+  includeRenderedPromptMetadata: z.boolean().optional(),
 
   // basic sampling
   temperature: z.number().optional(),

@@ -5,6 +5,7 @@ import type {
   LanguageModelV3FinishReason,
   LanguageModelV3StreamPart,
   LanguageModelV3Usage,
+  SharedV3ProviderMetadata,
   SharedV3Warning,
 } from "@ai-sdk/provider";
 import {
@@ -53,6 +54,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
   private async getArgs(options: LanguageModelV3CallOptions): Promise<{
     args: Record<string, unknown>;
     warnings: SharedV3Warning[];
+    providerMetadata: SharedV3ProviderMetadata | undefined;
   }> {
     const {
       prompt,
@@ -242,7 +244,19 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       Object.assign(args, llamacppOptions.extraParams);
     }
 
-    return { args, warnings };
+    const providerMetadata = llamacppOptions.includeRenderedPromptMetadata
+      ? {
+          llamacpp: {
+            renderedPrompt: promptText,
+            renderedPromptSource: llamacppOptions.useApplyTemplate
+              ? "apply-template"
+              : "serializer",
+            useApplyTemplate: Boolean(llamacppOptions.useApplyTemplate),
+          },
+        }
+      : undefined;
+
+    return { args, warnings, providerMetadata };
   }
 
   private async applyTemplate({
@@ -272,7 +286,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
   }
 
   async doGenerate(options: LanguageModelV3CallOptions) {
-    const { args, warnings } = await this.getArgs(options);
+    const { args, warnings, providerMetadata } = await this.getArgs(options);
 
     const {
       responseHeaders,
@@ -316,6 +330,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
       content,
       finishReason,
       usage,
+      providerMetadata,
       request: { body: args },
       response: { headers: responseHeaders, body: rawValue },
       warnings,
@@ -323,7 +338,7 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
   }
 
   async doStream(options: LanguageModelV3CallOptions) {
-    const { args, warnings } = await this.getArgs(options);
+    const { args, warnings, providerMetadata } = await this.getArgs(options);
     const body = { ...args, stream: true };
 
     const { responseHeaders, value: response } = await postJsonToApi({
@@ -403,7 +418,12 @@ export class LlamacppChatLanguageModel implements LanguageModelV3 {
           if (textStarted) {
             controller.enqueue({ type: "text-end", id: textId });
           }
-          controller.enqueue({ type: "finish", finishReason, usage });
+          controller.enqueue({
+            type: "finish",
+            finishReason,
+            usage,
+            providerMetadata,
+          });
         },
       })
     );

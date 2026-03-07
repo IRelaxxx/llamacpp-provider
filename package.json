@@ -1,6 +1,6 @@
 {
   "name": "@akrahl/llamacpp-provider",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "",
   "type": "module",
   "files": [
@@ -21,7 +21,7 @@
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "pnpm lint --fix",
     "tsc": "tsc --noEmit",
-    "publish": "pnpm build && npm publish --access=public"
+    "publish-package": "pnpm build && npm publish --access=public"
   },
   "keywords": [],
   "author": "",
